@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Home | Website CI/CD Pipeline{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Website CI/CD Pipeline</h1>
+    <p class="lead">
+        A simple Flask web app wired for continuous integration and deployment
+        with Docker, GitHub Actions, and cloud hosting.
+    </p>
+    <div class="hero-actions">
+        <a href="{{ url_for('login') }}" class="btn btn-primary">Try Login</a>
+        <a href="{{ url_for('health') }}" class="btn btn-secondary">Health Check</a>
+    </div>
+</section>
+
+<section class="features">
+    <div class="card">
+        <h3>Containerized</h3>
+        <p>Production-ready Docker image with Gunicorn and a slim Python base.</p>
+    </div>
+    <div class="card">
+        <h3>CI/CD Automated</h3>
+        <p>GitHub Actions builds, tests, and pushes images to Docker Hub on every push.</p>
+    </div>
+    <div class="card">
+        <h3>Cloud Ready</h3>
+        <p>Deploy to Render or AWS EC2 with minimal configuration.</p>
+    </div>
+</section>
+{% endblock %}

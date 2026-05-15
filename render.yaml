@@ -1,0 +1,16 @@
+# Render Blueprint — optional one-click deploy
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: website-cicd-pipeline
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health/ready
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: "5000"
