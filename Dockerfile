@@ -1,5 +1,5 @@
 # ---- Stage 1: Build dependencies ----
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ---- Stage 2: Production image ----
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ARG APP_VERSION=1.0.0
 LABEL org.opencontainers.image.title="website-cicd-pipeline" \
