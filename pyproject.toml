@@ -1,0 +1,29 @@
+[project]
+name = "website-cicd-pipeline"
+version = "1.0.0"
+description = "End-to-end DevOps CI/CD pipeline with Flask, Docker, and GitHub Actions"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-v --tb=short --cov=website --cov=app --cov-report=term-missing --cov-fail-under=85"
+
+[tool.coverage.run]
+source = ["website", "app"]
+omit = ["tests/*", "venv/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]

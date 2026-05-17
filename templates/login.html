@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,3 +43,31 @@
     </main>
 </body>
 </html>
+=======
+{% extends "base.html" %}
+
+{% block title %}Login | Website CI/CD Pipeline{% endblock %}
+
+{% block content %}
+<section class="auth-card">
+    <h1>Sign In</h1>
+    <p class="subtitle">UI-only demo — no database or real authentication.</p>
+
+    {% if message %}
+    <div class="alert">{{ message }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}" class="login-form">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
+    </form>
+</section>
+{% endblock %}
+>>>>>>> 5961f6c04d0ae3859ddf1b2cdb3b470b10b1b79f

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Flask
 gunicorn
 python-dotenv
@@ -10,3 +11,7 @@ Flask-Login
 Flask-JWT-Extended
 Flask-Limiter
 flask-swagger-ui
+=======
+Flask==3.0.3
+gunicorn==22.0.0
+>>>>>>> 5961f6c04d0ae3859ddf1b2cdb3b470b10b1b79f

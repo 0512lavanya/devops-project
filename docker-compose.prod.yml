@@ -1,0 +1,16 @@
+# Production overlay: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  web:
+    environment:
+      ENVIRONMENT: production
+      FLASK_DEBUG: "0"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
