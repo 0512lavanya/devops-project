@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard | VitalDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="glass-header">
+        <nav class="container nav-bar">
+            <div class="logo">
+                <span class="logo-icon">💧</span> VitalDrop <span style="font-size: 0.8rem; color: #fcd34d; margin-left: 0.5rem;">[ADMIN]</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.logout') }}" class="btn-secondary">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container fade-in" style="padding: 2rem 0;">
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" style="margin-bottom: 1rem;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="page-header" style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h2>System Administration</h2>
+            <a href="{{ url_for('main.backup_db') }}" class="btn-secondary" style="font-size: 0.9rem;">💾 Backup Database</a>
+        </div>
+
+        <!-- Analytics -->
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem;">
+            <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                <h3 style="color: #94a3b8; font-size: 0.9rem;">Total Donations</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: #fff; margin: 0;">{{ analytics.total_donations }}</p>
+            </div>
+            <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                <h3 style="color: #94a3b8; font-size: 0.9rem;">Active Donors</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: #10b981; margin: 0;">{{ analytics.active_donors }}</p>
+            </div>
+            <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                <h3 style="color: #94a3b8; font-size: 0.9rem;">Fulfilled Requests</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: #3b82f6; margin: 0;">{{ analytics.fulfilled_requests }}</p>
+            </div>
+            <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                <h3 style="color: #94a3b8; font-size: 0.9rem;">Registered Hospitals</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: #f59e0b; margin: 0;">{{ analytics.total_hospitals }}</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr; gap: 2rem; margin-top: 2rem;">
+            
+            <!-- Users -->
+            <div class="glass-card" style="width: 100%; max-width: none;">
+                <h3 style="margin-bottom: 1.5rem;">Registered Users & Hospitals</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                        <th style="padding: 0.5rem;">ID</th>
+                        <th style="padding: 0.5rem;">Username</th>
+                        <th style="padding: 0.5rem;">Email</th>
+                        <th style="padding: 0.5rem;">Role</th>
+                    </tr>
+                    {% for user in users %}
+                    <tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 0.8rem 0.5rem; color: #64748b;">#{{ user.id }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{{ user.username }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{{ user.email }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">
+                            <span class="badge" style="background: #334155;">{{ user.role }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <!-- All Requests -->
+            <div class="glass-card" style="width: 100%; max-width: none;">
+                <h3 style="margin-bottom: 1.5rem;">Global Blood Requests</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                        <th style="padding: 0.5rem;">Patient</th>
+                        <th style="padding: 0.5rem;">Hospital</th>
+                        <th style="padding: 0.5rem;">Urgency</th>
+                        <th style="padding: 0.5rem;">Status</th>
+                        <th style="padding: 0.5rem;">Action</th>
+                    </tr>
+                    {% for req in requests %}
+                    <tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 0.8rem 0.5rem;">{{ req.patient_name }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{{ req.hospital }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{{ req.urgency }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">
+                            {% if req.status == 'Pending' %}
+                                <span class="badge badge-pending">{{ req.status }}</span>
+                            {% else %}
+                                <span class="badge badge-fulfilled">{{ req.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 0.8rem 0.5rem;">
+                            {% if req.status == 'Pending' %}
+                                <a href="{{ url_for('main.fulfill_request', request_id=req.id) }}" class="btn-success" style="font-size: 0.7rem;">Force Fulfill</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            
+            <!-- Audit Logs -->
+            <div class="glass-card" style="width: 100%; max-width: none;">
+                <h3 style="margin-bottom: 1.5rem;">System Audit Logs</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                        <th style="padding: 0.5rem;">Timestamp</th>
+                        <th style="padding: 0.5rem;">User ID</th>
+                        <th style="padding: 0.5rem;">Action</th>
+                    </tr>
+                    {% for log in audits %}
+                    <tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 0.8rem 0.5rem; color: #64748b;">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{% if log.user_id %}User #{{ log.user_id }}{% else %}SYSTEM{% endif %}</td>
+                        <td style="padding: 0.8rem 0.5rem;">{{ log.action }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            
+        </div>
+    </main>
+
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2026 VitalDrop Administration</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Urgent Requests | VitalDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="glass-header">
+        <nav class="container nav-bar">
+            <div class="logo">
+                <span class="logo-icon">💧</span> VitalDrop
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.urgent_requests') }}" class="active">Urgent Requests</a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('main.dashboard') }}">My Dashboard</a></li>
+                    <li><a href="{{ url_for('main.logout') }}" class="btn-secondary">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('main.login') }}" class="btn-primary-outline">Login</a></li>
+                    <li><a href="{{ url_for('main.signup') }}" class="btn-primary">Sign Up</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container fade-in" style="padding: 4rem 0;">
+        <div class="page-header">
+            <h2>Live Blood Requests</h2>
+            <p style="color: #94a3b8;">Help save a life today. These patients urgently need donors at the specified hospitals.</p>
+        </div>
+
+        <div class="donors-grid">
+            {% if requests %}
+                {% for req in requests %}
+                <div class="donor-card" style="{% if req.urgency == 'High' %}border-top-color: #ef4444;{% else %}border-top-color: #fcd34d;{% endif %}">
+                    <div class="blood-badge" style="{% if req.urgency == 'High' %}background: #ef4444;{% else %}background: #f59e0b;{% endif %}">{{ req.blood_type_needed }}</div>
+                    <h3 style="color: #fff; margin-bottom: 0.2rem;">🏥 {{ req.hospital }}</h3>
+                    <p style="margin-bottom: 1.5rem; color: #cbd5e1;">Urgency: <strong>{{ req.urgency }}</strong></p>
+                    <p class="joined">Requested: {{ req.requested_on.strftime('%Y-%m-%d') }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <p>There are currently no active blood requests. Thank you to all our donors!</p>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2026 VitalDrop</p>
+        </div>
+    </footer>
+</body>
+</html>

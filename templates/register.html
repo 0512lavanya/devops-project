@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Donation | VitalDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="glass-header">
+        <nav class="container nav-bar">
+            <div class="logo">
+                <span class="logo-icon">💧</span> VitalDrop
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container fade-in form-page">
+        <div class="form-container glass-card">
+            <h2>Log a Blood Donation</h2>
+            <p>Help us keep track of your lifesaving contributions.</p>
+            <form action="{{ url_for('main.log_donation') }}" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="hospital_name">Hospital / Donation Center</label>
+                    <select id="hospital_name" name="hospital_name" class="form-input" required>
+                        <option value="">Select Hospital</option>
+                        <option value="City General Hospital">City General Hospital</option>
+                        <option value="Mercy Medical Center">Mercy Medical Center</option>
+                        <option value="St. Jude's Care">St. Jude's Care</option>
+                        <option value="Oakwood Healthcare">Oakwood Healthcare</option>
+                        <option value="Central Regional Hospital">Central Regional Hospital</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary full-width">Log Donation</button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2026 VitalDrop</p>
+        </div>
+    </footer>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

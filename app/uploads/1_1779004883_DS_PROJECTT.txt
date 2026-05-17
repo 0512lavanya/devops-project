@@ -1,0 +1,415 @@
+C:\Users\Dell\distributed-logging-mini
+
+cd "C:\Users\Dell\distributed-logging-mini"
+                 python -m venv "C:\Temp\dlm-venv"
+.\.venv\Scripts\Activate.ps1 this does not work then C:\Temp\dlm-venv\Scripts\Activate.ps1
+python -m ensurepip --upgrade
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+
+
+cd "C:\Users\Dell\distributed-logging-mini"               ....this is most
+.\.venv\Scripts\Activate.ps1                             importanttttttttt....
+
+
+
+
+Got it — this repo has multiple Flask apps (logging_server/app.py plus per-service services/*/app.py) and a demo runner (simulator/run_demo.py). Next I’ll open the demo runner and one app file to confirm the intended “run” command and ports.
+
+You’re set now. Next steps are to run 4 Python processes (1 logging server + 3 services), then run the simulator.
+
+1) (Optional) finish pip upgrade
+In your active (dlm-venv) terminal (the one upgrading pip), just wait until it returns to the prompt.
+
+2) Start the logging server (port 6000)
+Open a new PowerShell terminal, activate C:\Temp\dlm-venv, then run:
+
+C:\Temp\dlm-venv\Scripts\Activate.ps1        terminal vs cone 2nd one
+python .\logging_server\app.py
+Dashboard will be at http://127.0.0.1:6000/.
+
+3) Start the 3 services (each in its own terminal)
+UserService (5001)
+
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\user_service\app.py            3rd terminalll vs ode
+OrderService (5002) 
+
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\order_service\app.py
+PaymentService (5003)
+
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\payment_service\app.py                4th terminal vs codee
+4) Run the demo traffic generator
+In another terminal:
+
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\simulator\run_demo.py
+If any service says “address already in use”, tell me which port (5001/5002/5003/6000) and I’ll give you the exact command to free it.
+
+
+
+
+in 1st command prompt run ad administaror
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+PS C:\Users\Dell\distributed-logging-mini> $env:PORT="8000"
+
+python .\logging_server\app.py
+
+ * Running on http://127.0.0.1:8000
+Press CTRL+C to quit
+127.0.0.1 - - [01/May/2026 20:35:52] "GET / HTTP/1.1" 302 -
+127.0.0.1 - - [01/May/2026 20:35:52] "GET /logs HTTP/1.1" 200 -
+127.0.0.1 - - [01/May/2026 20:35:52] "GET /favicon.ico HTTP/1.1" 404 -
+
+
+
+
+
+in 2nd cmd prompt run as administrator 
+Invoke-RestMethod "http://127.0.0.1:6000/health"
+
+
+
+
+
+
+
+
+
+REPORTTTT BY CURSOR AI....
+Report: Distributed Logging Mini (What you ran and what it proves)
+What this project is
+A centralized distributed logging system for multiple microservices.
+Instead of each service keeping logs separately, all services send their logs to one logging server that stores and shows them in a single dashboard.
+
+Components (4 programs)
+1) Logging Server (logging_server/app.py)
+Runs on: http://127.0.0.1:<PORT> (you used a browser-safe port)
+Job:
+Receives logs from services at POST /ingest
+Stores them in a database (logs.db)
+Provides a UI dashboard at /logs
+Provides API at /api/logs
+Key feature: assigns global_lamport to every log to enforce a single global order.
+2) Services (3 microservices)
+UserService (services/user_service/app.py) → port 5001
+OrderService (services/order_service/app.py) → port 5002
+PaymentService (services/payment_service/app.py) → port 5003
+Each service:
+
+Handles its own API (example: UserService has POST /user/create)
+Creates logs like user.created, order.created, payment.charge.succeeded
+Sends logs to the logging server
+Has its own local sequencing: client_seq and client_lamport
+3) Simulator (simulator/run_demo.py)
+Generates concurrent requests to all services
+Adds random delay to simulate network delay
+Can intentionally crash one service to simulate failure
+Purpose: stress-test logging and show ordering/reliability
+What you saw in the dashboard (meaning of each column)
+global_lamport:
+The logging server’s global clock.
+This is the main ordering used to display logs across all services in one timeline.
+
+received_time:
+When the logging server received the log.
+
+service:
+Which service created the log (User/Order/Payment).
+
+level:
+Severity (INFO, WARN, ERROR).
+
+event:
+Short event name like user.created, order.created, payment.charge.succeeded.
+
+message:
+Human-readable description.
+
+client_seq:
+Sequence number inside that service (helps detect missing logs from that service).
+
+client_lamport:
+The service’s own Lamport clock value for that event.
+
+Why this is “correct”
+Your output confirms the system works because:
+
+Dashboard loads (“Distributed Logging Dashboard”)
+Logs from all 3 services appear together
+global_lamport increases continuously → proves the server is assigning a consistent global order
+You saw different levels (like WARN) → proves level filtering is meaningful
+Payment logs show pairs like:
+payment.charge.requested
+payment.charge.succeeded which shows service workflows are being logged properly
+What problem this solves
+In microservices, logs are scattered across many services and machines. This system gives you:
+
+Single place to view logs
+Global ordering across services (Lamport clock)
+Filtering by service and severity
+Ability to notice missing logs (via client_seq gaps)
+How to demonstrate it (quick demo script)
+Start logging server → open /logs
+Start all three services
+Run simulator → watch logs fill the dashboard
+Filter by Service = PaymentService or Level = WARN
+
+
+
+
+
+
+
+
+
+
+what this exactly do
+
+It collects logs from multiple services into one place and shows them in one globally ordered timeline.
+
+Exactly what happens
+You run 3 microservices (User, Order, Payment).
+When you call their APIs (or run the simulator), each service creates log events like user.created, order.created, payment.charge.succeeded.
+Each service sends those logs to a central Logging Server (HTTP POST /ingest).
+The Logging Server stores the logs (database) and assigns a global_lamport number to every log so logs from different services can be displayed in one consistent order.
+You open the dashboard (/logs) to:
+see all logs together
+filter by service and level
+detect missing logs for a service using sequence gaps (client_seq)
+In one line
+It’s a mini “distributed logging + ordering” system that turns many service logs into one searchable, ordered dashboard.
+
+
+
+
+
+why it is important in real world.......
+
+It’s important in the real world because real systems are made of many services, and when something breaks you need to see the full story across all services in one place.
+
+Why it matters
+Faster debugging: one user action can touch User → Order → Payment. Central logs let you trace the whole flow.
+Incident response: during outages you can quickly filter ERROR/WARN and find what started failing first.
+Root-cause analysis: services run on different machines and clocks; ordering is messy. A global ordering method (like Lamport) helps build a consistent timeline.
+Monitoring & alerts: centralized logs power alerts like “too many payment failures” or “orders are timing out”.
+Audit & compliance: you often must keep records of key actions (payments, logins, data changes).
+Detect missing data: per-service sequence numbers help notice “some logs never reached the server” (network issues, crashes, disk full).
+Performance insight: logs show latency, retries, bottlenecks, and unusual spikes.
+Simple example
+Customer says: “Payment failed.”
+Without central logging you check 3–5 services separately. With it, you filter by request time/service/level and find the exact failure chain in minutes.
+
+
+
+
+
+
+
+is the above project matches this Experiential Learning Components for the Course:
+
+Distributed Systems [BCS606]
+
+1. Coursera Certification [L3] Max Marks: 10
+
+2. Mini Project [L4, L5] Max Marks: 20
+
+1. Recommended Coursera Certification: Foundations of Distributed
+
+Database Systems
+
+Activity:
+
+Certificate Submission: before Test 2
+
+2. Mini Project:
+
+The mini project statements are framed using real-world distributed system scenarios
+
+such as cloud storage, online reservation systems, smart city alerts, and digital banking,
+
+enabling students to directly relate theoretical concepts learnt to practical, real-time
+
+applications
+
+Duration: 13–14 Hours
+
+Group Size: 4-5 Students
+
+Outcome: Design, implement, test, and demonstrate a working distributed system
+
+prototype.
+
+Students may implement the mini project using Java, Python, C/C++, or Go. The choice
+
+of programming language is flexible, provided the implementation demonstrates core
+
+distributed systems concepts such as communication, coordination, concurrency, and
+
+fault handling.
+
+Activity Hours
+
+Understanding problem & DS concept 2
+
+System design & architecture 2
+
+Implementation 5-6
+
+Testing & failure scenarios 2
+
+Demonstration preparation 2
+
+ Final Demonstration (Mandatory) - 3
+
+rd Week of May 2026
+
+Each group shall demonstrate:
+
+1. Working distributed system
+
+2. Architecture explanation
+
+3. Mapping to syllabus concepts
+
+4. Challenges faced & learning outcomes
+
+topic : In large applications (e.g., Amazon, Netflix), services run on different servers. When
+
+failures occur, logs must be analysed to understand event order. Design and implement
+
+one such system for distributed Logging in Micro-services.
+
+Yes — your project matches the mini‑project topic and the required distributed-systems concepts.
+
+How it matches the given topic
+Topic asks: “Design and implement a system for distributed logging in micro-services; analyze event order.”
+Your project does:
+Multiple microservices (User/Order/Payment) generate logs
+A central logging server ingests and stores logs
+Dashboard shows logs in event order using Lamport clocks (global_lamport, plus per‑client client_lamport)
+Mapping to required DS concepts
+Communication: services send logs to the server over HTTP (/ingest).
+Coordination / ordering: server assigns a global Lamport clock to create one ordered timeline across services.
+Concurrency: simulator sends concurrent traffic; server handles multiple incoming log batches.
+Fault handling: simulator can crash a service; services spool logs locally and can flush later (plus the UI shows missing sequences via client_seq gaps).
+Fits the expected outcome format
+Design + architecture: clear components (3 services + logging server + simulator + DB + dashboard).
+Implementation: working Python/Flask prototype.
+Testing & failure scenarios: delay injection + crash endpoint + gap detection.
+Demonstration: you can show live dashboard, filters, global ordering, and crash behavior.
+Only note: the Coursera certification part is separate; the project covers the Mini Project requirement well.
+
+
+
+
+
+Viva-style questions your DS teacher may ask (with answers)
+Q: What is the problem this project solves?
+A: In microservices, logs are spread across many servers. When a failure happens, we need one place to collect logs and a way to understand the order of events across services. This project centralizes logs and orders them using a Lamport clock.
+
+Q: What are the main components of your system?
+A: (1) Logging server (ingests + stores + dashboard), (2) Microservices (User/Order/Payment) that generate logs, (3) Simulator that creates concurrent traffic and failures, (4) Database file to store logs.
+
+Q: How do services communicate with the logging server?
+A: Using HTTP. Services send log batches to the logging server endpoint (ingest API).
+
+Q: Why can’t we just use timestamps to order logs?
+A: Timestamps across machines are not perfectly synchronized (clock drift, time skew). Network delay can also reorder arrival. So timestamps alone can give a wrong global event order.
+
+Q: What is a Lamport clock?
+A: A logical clock that gives a number to events so that if event A causally happens before event B, then 
+L
+(
+A
+)
+<
+L
+(
+B
+)
+L(A)<L(B). It helps create a consistent ordering without relying on real time.
+
+Q: What is global_lamport in your dashboard?
+A: It’s the logging server’s Lamport value assigned to each received log record, giving a single global order for display and querying.
+
+Q: What is client_seq and why is it needed?
+A: It’s a per-service sequence number for logs. It helps detect missing logs (if sequence jumps, some logs didn’t reach the server).
+
+Q: What fault scenarios did you test?
+A: (1) Artificial delay in requests, (2) crashing a service during load. The system still collects other logs and can show gaps/missing sequences for the crashed service.
+
+Q: How does your system handle service crash so logs are not lost?
+A: Services spool logs locally (store temporarily) and can flush them when running again, reducing data loss when the server/service is down.
+
+Q: Where is concurrency in your project?
+A: The simulator sends concurrent requests using threads, and the logging server receives logs from multiple services concurrently.
+
+Q: Is this system strongly consistent?
+A: It provides a consistent global ordering for received logs, but it doesn’t guarantee perfect “real-time causality” like vector clocks would. It’s a practical approach to build an ordered timeline.
+
+Q: What are limitations / improvements?
+A: Single logging server is a bottleneck and single point of failure; could improve using replication, message queues (Kafka/RabbitMQ), batching, retries with backoff, authentication, and distributed storage.
+
+
+
+
+
+
+
+
+
+8000
+
+1‑minute demo script (Dashboard on 8000)
+What to say (simple lines)
+Problem: “In microservices, logs are scattered. During failures we need one place to see logs and understand event order.”
+Solution: “Our services send logs to a central logging server. The server assigns a global Lamport clock (global_lamport) so logs from all services appear in one ordered timeline.”
+Show: “I’ll start server + services, generate traffic, then open the dashboard and filter logs.”
+Fault test: “Simulator can add delays and crash one service; dashboard still shows ordered logs and gaps.”
+Commands to run (copy‑paste)
+
+Terminal 1 — Logging server (port 8000)
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+$env:PORT="8000"
+python .\logging_server\app.py
+
+Terminal 2 — UserService (5001)
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\user_service\app.py
+
+Terminal 3 — OrderService (5002)
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\order_service\app.py
+
+Terminal 4 — PaymentService (5003)
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\services\payment_service\app.py
+
+Terminal 5 — Generate traffic + failure
+cd "C:\Users\Dell\distributed-logging-mini"
+C:\Temp\dlm-venv\Scripts\Activate.ps1
+python .\simulator\run_demo.py
+What to open in browser
+
+Dashboard: http://127.0.0.1:8000/logs
+
+cd C:\Users\Dell\distributed-logging-mini
+.\.venv\Scripts\Activate.ps1
+
+python .\simulator\run_demo.py
+
+
+What to point out on the page
+global_lamport increases → global ordering across services
+Filter Service = PaymentService or Level = WARN/ERROR
+If crash happens, mention gaps (missing client_seq) can appear for that service
+
+

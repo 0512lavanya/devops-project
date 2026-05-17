@@ -1,0 +1,12 @@
+Flask
+gunicorn
+python-dotenv
+SQLAlchemy
+Flask-SQLAlchemy
+pytest
+prometheus-client
+redis
+Flask-Login
+Flask-JWT-Extended
+Flask-Limiter
+flask-swagger-ui

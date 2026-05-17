@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Dashboard | VitalDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="glass-header">
+        <nav class="container nav-bar">
+            <div class="logo">
+                <span class="logo-icon">💧</span> VitalDrop
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><span style="font-weight: bold; color: var(--primary);">Hello, {{ current_user.username }}</span></li>
+                <li><a href="{{ url_for('main.logout') }}" class="btn-secondary">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container fade-in" style="padding: 2rem 0;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" style="margin-bottom: 1rem;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="page-header" style="margin-top: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+            <h2>{{ 'Global Hospital Command Center' if current_user.role == 'hospital' else 'Donor Dashboard' }}</h2>
+        </div>
+
+        {% if current_user.role == 'hospital' %}
+            <!-- HOSPITAL VIEW -->
+
+            <!-- BROADCAST NOTIFICATIONS & ALERTS -->
+            {% if broadcasts %}
+                <div style="margin-bottom: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <h3 style="margin: 0;">System Notifications</h3>
+                        <span style="background: #ef4444; color: white; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; animation: pulse 2s infinite;">{{ broadcasts|length }} New Alerts</span>
+                    </div>
+                    {% for msg in broadcasts %}
+                        <div class="alert" style="background: {% if msg.priority == 'Emergency' %}rgba(239,68,68,0.2){% else %}rgba(59,130,246,0.2){% endif %}; border-left: 4px solid {% if msg.priority == 'Emergency' %}#ef4444{% else %}#3b82f6{% endif %};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #fff;">{{ '🚨 ' if msg.priority == 'Emergency' else '📢 ' }}{{ msg.title }}</strong>
+                                    <p style="margin: 0.3rem 0; font-size: 0.9rem; color: #cbd5e1;">{{ msg.description }}</p>
+                                </div>
+                                <div style="text-align: right; font-size: 0.8rem; color: #94a3b8;">
+                                    From: {{ msg.sender_name }}<br>
+                                    {{ msg.timestamp.strftime('%H:%M | %Y-%m-%d') }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Top Metrics -->
+            <div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; margin-bottom: 2rem;">
+                <div class="glass-card" style="padding: 1.5rem; text-align: center; border-bottom: 4px solid #3b82f6;">
+                    <h3 style="color: #94a3b8; font-size: 0.9rem;">Total Donations Handled</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: #fff; margin: 0;">{{ stats.total_handled }}</p>
+                </div>
+                <div class="glass-card" style="padding: 1.5rem; text-align: center; border-bottom: 4px solid #f59e0b;">
+                    <h3 style="color: #94a3b8; font-size: 0.9rem;">My Active Requests</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: #fcd34d; margin: 0;">{{ stats.active_requests }}</p>
+                </div>
+                <div class="glass-card" style="padding: 1.5rem; text-align: center; border-bottom: 4px solid #ef4444; background: rgba(239,68,68,0.05);">
+                    <h3 style="color: #fca5a5; font-size: 0.9rem;">My Emergencies</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: #ef4444; margin: 0;">{{ stats.emergencies }}</p>
+                </div>
+                <div class="glass-card" style="padding: 1.5rem; text-align: center; border-bottom: 4px solid #8b5cf6;">
+                    <h3 style="color: #94a3b8; font-size: 0.9rem;">Pending Verifications</h3>
+                    <p style="font-size: 2rem; font-weight: bold; color: #c4b5fd; margin: 0;">{{ stats.pending_verifications }}</p>
+                </div>
+            </div>
+
+            <div class="dashboard-grid" style="display: grid; grid-template-columns: 3fr 1fr; gap: 2rem;">
+                
+                <!-- Main Content Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+
+                    <!-- GLOBAL CROSS-HOSPITAL REQUESTS -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border-top: 3px solid #8b5cf6;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                            <h3 style="margin: 0;">Global Required Blood (Cross-Hospital)</h3>
+                            
+                            <!-- Filtering Controls -->
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span style="font-size: 0.8rem; color: #94a3b8;">Filters:</span>
+                                <select id="filter-blood" class="form-input" style="padding: 0.3rem; font-size: 0.8rem; width: auto;" onchange="filterGlobalRequests()">
+                                    <option value="All">All Types</option>
+                                    <option value="A+">A+</option>
+                                    <option value="O+">O+</option>
+                                    <option value="B+">B+</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="O-">O-</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB-">AB-</option>
+                                </select>
+                                <select id="filter-priority" class="form-input" style="padding: 0.3rem; font-size: 0.8rem; width: auto;" onchange="filterGlobalRequests()">
+                                    <option value="All">All Priorities</option>
+                                    <option value="Emergency">🚨 Emergency Only</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                                <input type="text" id="filter-location" class="form-input" placeholder="Filter by Location/Hospital..." style="padding: 0.3rem; font-size: 0.8rem; width: 180px;" onkeyup="filterGlobalRequests()">
+                            </div>
+                        </div>
+                        {% if global_requests %}
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                                    <th style="padding: 0.5rem;">Patient & Need</th>
+                                    <th style="padding: 0.5rem;">Hospital (Location)</th>
+                                    <th style="padding: 0.5rem;">Smart Match</th>
+                                    <th style="padding: 0.5rem;">Status / Action</th>
+                                </tr>
+                                {% for req in global_requests %}
+                                <tr class="global-req-row" data-blood="{{ req.blood_type_needed }}" data-priority="{% if req.is_emergency %}Emergency{% else %}{{ req.urgency }}{% endif %}" data-location="{{ req.hospital }}" style="border-bottom: 1px solid #1e293b; {% if req.is_emergency %}background: rgba(239,68,68,0.1);{% endif %}">
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="font-weight: 500; color: #fff;">{{ req.patient_name }} (Age: {{ req.age or 'N/A' }})</div>
+                                        <div style="color: #ef4444; font-weight: bold;">{{ req.units_required }} Unit(s) of {{ req.blood_type_needed }}</div>
+                                        <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">Diagnosis: {{ req.diagnosis or 'N/A' }}</div>
+                                        {% if req.is_emergency %}
+                                            <div style="color: #ef4444; font-size: 0.8rem; font-weight: bold; margin-top: 0.2rem;">🚨 EMERGENCY</div>
+                                        {% else %}
+                                            <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">Priority: {{ req.urgency }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="color: #e2e8f0; font-weight: 500;">{{ req.hospital }}</div>
+                                        {% if req.report_file_path %}
+                                            <div style="color: #10b981; font-size: 0.8rem; margin-top: 0.2rem;">📄 Medical Report attached</div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        {% if req.status == 'Pending' %}
+                                            <span style="color: #10b981; font-weight: bold;">{{ req.matching_donors_count }} Donors</span> in your pool match.
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        {% if req.status == 'Pending' %}
+                                            <form action="{{ url_for('main.accept_request', request_id=req.id) }}" method="POST">
+                                                <button type="submit" class="btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.8rem;">Accept Request</button>
+                                            </form>
+                                        {% elif req.status == 'Accepted' and req.accepting_hospital == current_user.username %}
+                                            <span style="color: #3b82f6; font-weight: bold;">Accepted by You</span>
+                                            <form action="{{ url_for('main.assign_donor', request_id=req.id) }}" method="POST" style="margin-top: 0.5rem; display: flex; gap: 0.3rem;">
+                                                <input type="number" name="donor_id" placeholder="Donor ID" class="form-input" style="padding: 0.3rem; width: 60px;" required>
+                                                <button type="submit" class="btn-primary-outline" style="font-size: 0.7rem;">Assign</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="badge badge-pending">{{ req.status }}</span><br>
+                                            <span style="font-size: 0.75rem; color: #64748b;">(Handled by {{ req.accepting_hospital }})</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p style="color: #64748b; font-size: 0.9rem;">No global blood requests currently.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- LOCAL PATIENT REQUESTS -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border-top: 3px solid #3b82f6;">
+                        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">My Active Patient Blood Requests</h3>
+                        {% if requests %}
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                                    <th style="padding: 0.5rem;">Patient & Blood</th>
+                                    <th style="padding: 0.5rem;">Status</th>
+                                    <th style="padding: 0.5rem;">Action</th>
+                                </tr>
+                                {% for req in requests %}
+                                <tr style="border-bottom: 1px solid #1e293b; {% if req.is_emergency %}background: rgba(239,68,68,0.1);{% endif %}">
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="font-weight: 500; color: #fff;">{{ req.patient_name }}</div>
+                                        <div style="color: #fca5a5; font-weight: bold;">Type: {{ req.blood_type_needed }}</div>
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        {% if req.status == 'Pending' %}
+                                            <span class="badge badge-pending">Searching...</span>
+                                        {% elif req.status == 'Accepted' %}
+                                            <span style="color: #10b981;">Accepted by {{ req.accepting_hospital }}</span>
+                                        {% elif req.status == 'Assigned' %}
+                                            <span class="badge" style="background: #3b82f6;">Assigned</span>
+                                        {% else %}
+                                            <span class="badge badge-fulfilled">{{ req.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        {% if req.status in ['Pending', 'Accepted', 'Assigned'] %}
+                                            <a href="{{ url_for('main.fulfill_request', request_id=req.id) }}" class="btn-success" style="font-size: 0.7rem; display: block; text-align: center; margin-bottom: 0.3rem;">Mark Completed</a>
+                                        {% endif %}
+                                        {% if req.status == 'Pending' %}
+                                            <form action="{{ url_for('main.assign_donor', request_id=req.id) }}" method="POST" style="display: flex; gap: 0.3rem;">
+                                                <input type="number" name="donor_id" placeholder="ID" class="form-input" style="padding: 0.3rem; width: 60px;" required>
+                                                <button type="submit" class="btn-primary-outline" style="font-size: 0.7rem;">Assign</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p style="color: #64748b; font-size: 0.9rem;">No active blood requests for your patients.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- DONOR VERIFICATION PANEL -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border-top: 3px solid #f59e0b;">
+                        <h3 style="margin-bottom: 1.5rem; margin-top: 0;">Pending Donor Verifications</h3>
+                        {% if pending_donors %}
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                                    <th style="padding: 0.5rem;">Donor Info</th>
+                                    <th style="padding: 0.5rem;">Health Report</th>
+                                    <th style="padding: 0.5rem;">Decision</th>
+                                </tr>
+                                {% for d in pending_donors %}
+                                <tr style="border-bottom: 1px solid #1e293b;">
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="font-weight: bold; color: #fff;">{{ d.donor.username }}</div>
+                                        <div style="color: #ef4444; font-size: 0.9rem;">Type: {{ d.donor.blood_type }}</div>
+                                        <div style="color: #cbd5e1; font-size: 0.8rem;">Last Donation: {{ d.donor.donations.order_by(d.donor.donations._class.donation_date.desc()).first().donation_date.strftime('%Y-%m-%d') if d.donor.donations.first() else 'Never' }}</div>
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        {% if d.health_record and d.health_record.report_file_path %}
+                                            <span style="color: #10b981; font-size: 0.8rem;">📄 Report Attached</span><br>
+                                            <span style="color: #94a3b8; font-size: 0.8rem;">"{{ d.health_record.medical_notes }}"</span>
+                                        {% else %}
+                                            <span style="color: #ef4444; font-size: 0.8rem;">❌ No Report</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <form action="{{ url_for('main.verify_donor', donation_id=d.id) }}" method="POST" style="display: flex; flex-direction: column; gap: 0.3rem;">
+                                            <input type="text" name="notes" placeholder="Notes..." class="form-input" style="padding: 0.3rem;" required>
+                                            <div style="display: flex; gap: 0.3rem;">
+                                                <button type="submit" name="status" value="Fit" class="btn-success" style="font-size: 0.7rem; flex: 1;">Approve (Fit)</button>
+                                                <button type="submit" name="status" value="Unfit" class="btn-primary" style="background: #ef4444; font-size: 0.7rem; flex: 1;">Reject</button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p style="color: #64748b; font-size: 0.9rem;">All donors verified. No pending reviews.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- APPROVED DONORS (FIT) -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border-top: 3px solid #10b981;">
+                        <h3 style="margin-bottom: 1.5rem; margin-top: 0;">Verified Donors (Fit & Ready)</h3>
+                        {% if approved_donors %}
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <tr style="border-bottom: 2px solid #334155; text-align: left;">
+                                    <th style="padding: 0.5rem;">Donor Info</th>
+                                    <th style="padding: 0.5rem;">Stats & Status</th>
+                                    <th style="padding: 0.5rem;">Action</th>
+                                </tr>
+                                {% for d in approved_donors %}
+                                <tr style="border-bottom: 1px solid #1e293b;">
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="font-weight: bold; color: #fff;">{{ d.donor.username }} (ID: {{ d.donor.id }})</div>
+                                        <div style="color: #ef4444; font-size: 0.9rem;">Type: {{ d.donor.blood_type }}</div>
+                                    </td>
+                                    <td style="padding: 0.8rem 0.5rem;">
+                                        <div style="color: #94a3b8; font-size: 0.8rem;">Lifetime Donations: {{ d.total_donations }}</div>
+                                        <div style="color: #cbd5e1; font-size: 0.8rem;">Last Donation: {{ d.donor.donations.order_by(d.donor.donations._class.donation_date.desc()).first().donation_date.strftime('%Y-%m-%d') if d.donor.donations.first() else 'Never' }}</div>
+                                        {% if d.donor.is_available %}
+                                            <span style="color: #10b981; font-size: 0.8rem; font-weight: bold;">🟢 Available Now</span>
+                                        {% else %}
+                                            <span style="color: #64748b; font-size: 0.8rem;">⏸️ Not Available</span>
+                                        {% endif %}
+                                    </td>
+                                        <a href="{{ url_for('main.confirm_donation', donation_id=d.id) }}" class="btn-success" style="font-size: 0.75rem; display: block; text-align: center; margin-bottom: 0.3rem;">Confirm Draw</a>
+                                        <form action="{{ url_for('main.dashboard') }}" method="GET" style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                            <button type="button" class="btn-primary-outline" style="font-size: 0.7rem;" onclick="alert('To assign this donor, copy Donor ID ({{ d.donor.id }}) and use the Assign Donor button in the Patient Requests table.')">Assign to Request</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p style="color: #64748b; font-size: 0.9rem;">No verified donors currently ready in your queue.</p>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <!-- Side Content Column -->
+                <div style="display: flex; flex-direction: column; gap: 2rem;">
+                    
+                    <!-- NEW PATIENT REQUEST WITH HEALTH RECORD -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border: 1px solid #334155;">
+                        <h3 style="margin-top: 0; color: #fff;">+ New Patient Request</h3>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 1rem;">Broadcasts globally.</p>
+                        
+                        <form action="{{ url_for('main.request_blood') }}" method="POST" enctype="multipart/form-data">
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label style="font-size: 0.8rem;">Patient Name</label>
+                                    <input type="text" name="patient_name" class="form-input" style="padding: 0.4rem;" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label style="font-size: 0.8rem;">Location</label>
+                                    <input type="text" name="location" class="form-input" style="padding: 0.4rem;" required>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label style="font-size: 0.8rem;">Age</label>
+                                    <input type="number" name="age" class="form-input" style="padding: 0.4rem;">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label style="font-size: 0.8rem;">Units Needed</label>
+                                    <input type="number" name="units_required" value="1" class="form-input" style="padding: 0.4rem;" required>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <label style="font-size: 0.8rem;">Blood Type</label>
+                                <select name="blood_type" class="form-input" style="padding: 0.4rem;" required>
+                                    <option value="">Select Type</option>
+                                    <option value="A+">A+</option>
+                                    <option value="O+">O+</option>
+                                    <option value="B+">B+</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="O-">O-</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB-">AB-</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <label style="font-size: 0.8rem;">Diagnosis / Reason</label>
+                                <input type="text" name="diagnosis" class="form-input" style="padding: 0.4rem;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <label style="font-size: 0.8rem;">Doctor Ref</label>
+                                <input type="text" name="doctor_reference" class="form-input" style="padding: 0.4rem;" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <label style="font-size: 0.8rem;">Medical Report (PDF/Image)</label>
+                                <input type="file" name="patient_report" accept=".pdf,.png,.jpg,.jpeg" class="form-input" style="padding: 0.4rem;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <label style="font-size: 0.8rem;">Priority</label>
+                                <select name="urgency" class="form-input" style="padding: 0.4rem;" required>
+                                    <option value="High">High</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(239, 68, 68, 0.1); padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.3); margin-bottom: 1rem;">
+                                <input type="checkbox" id="dash_is_emergency" name="is_emergency" style="width: 16px; height: 16px;">
+                                <label for="dash_is_emergency" style="margin: 0; color: #fca5a5; font-size: 0.8rem; font-weight: bold;">🚨 MARK EMERGENCY</label>
+                            </div>
+                            <button type="submit" class="btn-primary full-width" style="padding: 0.5rem;">Broadcast Request</button>
+                        </form>
+                    </div>
+
+                    <!-- SEND BROADCAST MESSAGE -->
+                    <div class="glass-card" style="width: 100%; max-width: none; border: 1px solid #3b82f6;">
+                        <h3 style="margin-top: 0; color: #fff;">📢 Send Broadcast</h3>
+                        <form action="{{ url_for('main.send_broadcast') }}" method="POST">
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <input type="text" name="title" placeholder="Title" class="form-input" style="padding: 0.4rem;" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <textarea name="description" placeholder="Message details..." class="form-input" style="padding: 0.4rem; min-height: 60px;" required></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.8rem;">
+                                <select name="priority" class="form-input" style="padding: 0.4rem;" required>
+                                    <option value="Normal">Normal Priority</option>
+                                    <option value="Emergency" style="color: red; font-weight: bold;">Emergency Alert</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary full-width" style="padding: 0.5rem;">Send to All Hospitals</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+        {% else %}
+                                    <!-- PREMIUM DONOR VIEW -->
+            
+            <style>
+                .premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+                .premium-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+                .premium-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5); }
+                .card-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.8rem; }
+                .card-title { margin: 0; font-size: 1.1rem; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 0.5rem; }
+                
+                .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+                .stat-box { background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.02); }
+                .stat-value { font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                .stat-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.3rem; }
+                
+                .badge-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; margin-bottom: 0.4rem; color: #cbd5e1; }
+                .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; margin-bottom: 1.2rem; }
+                .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 99px; transition: width 1s ease-in-out; }
+                
+                .action-btn { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.2rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; color: #eff6ff; text-decoration: none; font-weight: 500; transition: all 0.2s ease; margin-bottom: 0.8rem; }
+                .action-btn:hover { background: rgba(59, 130, 246, 0.2); transform: translateX(5px); }
+                .action-btn.danger { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fef2f2; }
+                .action-btn.danger:hover { background: rgba(239, 68, 68, 0.2); }
+                
+                .toggle-switch { appearance: none; width: 50px; height: 26px; background: #475569; border-radius: 99px; position: relative; cursor: pointer; outline: none; transition: background 0.3s; }
+                .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: transform 0.3s; }
+                .toggle-switch:checked { background: #10b981; }
+                .toggle-switch:checked::after { transform: translateX(24px); }
+            </style>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30,41,59,0.8); backdrop-filter: blur(20px); padding: 1.5rem 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 2rem;">
+                <div>
+                    <h2 style="margin: 0; color: #f8fafc; font-size: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+                        <span style="font-size: 2rem;">💧</span> VitalDrop
+                    </h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 99px;">
+                        <span style="background: linear-gradient(135deg, #60a5fa, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold;">👤 {{ current_user.username }}</span>
+                    </div>
+                    <a href="{{ url_for('main.logout') }}" style="color: #f87171; text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s;">
+                        <span>🔓</span> Logout
+                    </a>
+                </div>
+            </div>
+
+            <!-- ELIGIBILITY & AVAILABILITY BANNER -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="premium-card" style="border-left: 4px solid {% if is_eligible %}#10b981{% else %}#ef4444{% endif %}; background: linear-gradient(to right, {% if is_eligible %}rgba(16,185,129,0.1){% else %}rgba(239,68,68,0.1){% endif %}, rgba(30,41,59,0.7));">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.4rem; color: {% if is_eligible %}#34d399{% else %}#f87171{% endif %}; display: flex; align-items: center; gap: 0.5rem;">
+                                {% if is_eligible %}✅ Eligible to Donate{% else %}❌ Temporarily Ineligible{% endif %}
+                            </h3>
+                            <p style="color: #cbd5e1; margin: 0 0 1rem 0; font-size: 0.95rem;">
+                                {% if is_eligible %}You meet all medical and interval requirements.{% else %}{{ unfit_reason }}{% endif %}
+                            </p>
+                            <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(15,23,42,0.5); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="font-size: 1.2rem;">📅</span>
+                                <div>
+                                    <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Next Eligible Date</div>
+                                    <div style="color: #f8fafc; font-weight: 600;">{{ next_eligible_date.strftime('%B %d, %Y') }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-card" style="display: flex; flex-direction: column; justify-content: center;">
+                    <div class="card-header" style="border:none; margin-bottom: 0.5rem;">
+                        <h3 class="card-title">🚀 Live Availability</h3>
+                    </div>
+                    <form action="{{ url_for('main.toggle_availability') }}" method="POST" style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.5); padding: 0.8rem 1rem; border-radius: 12px;">
+                        <div style="font-weight: 500; color: {% if current_user.is_available %}#10b981{% else %}#94a3b8{% endif %};">
+                            {% if current_user.is_available %}Available for Emergency{% else %}Currently Unavailable{% endif %}
+                        </div>
+                        <button type="submit" style="background:transparent; border:none; padding:0; margin:0;">
+                            <input type="checkbox" class="toggle-switch" {% if current_user.is_available %}checked{% endif %} onclick="this.form.submit()">
+                        </button>
+                    </form>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.4;">When enabled, your profile is prioritized for urgent hospital requests.</p>
+                </div>
+            </div>
+
+            
+            <!-- 8. SMART AI INSIGHTS -->
+            <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); border: 1px solid rgba(139,92,246,0.3); padding: 1.2rem; border-radius: 12px; margin-bottom: 2rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                <h3 style="margin: 0; color: #a78bfa; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🧠</span> VitalDrop AI Insights
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                    {% if smart_insights.rare_donor %}
+                        <div style="background: rgba(15,23,42,0.6); padding: 0.6rem 1rem; border-radius: 8px; color: #cbd5e1; font-size: 0.9rem; border-left: 3px solid #f43f5e;">
+                            {{ smart_insights.rare_donor }}
+                        </div>
+                    {% endif %}
+                    <div style="background: rgba(15,23,42,0.6); padding: 0.6rem 1rem; border-radius: 8px; color: #cbd5e1; font-size: 0.9rem; border-left: 3px solid #f59e0b;">
+                        {{ smart_insights.urgent_hospitals }}
+                    </div>
+                    <div style="background: rgba(15,23,42,0.6); padding: 0.6rem 1rem; border-radius: 8px; color: #cbd5e1; font-size: 0.9rem; border-left: 3px solid #10b981;">
+                        {{ smart_insights.lives_saved }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="premium-grid">
+                <!-- HOSPITAL MATCHING -->
+                <div class="premium-card">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">🏥</span>
+                        <h3 class="card-title">Hospital Matching</h3>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; background: rgba(15,23,42,0.5); padding: 0.8rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Blood Group</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444;">{{ current_user.blood_type }}</div>
+                        </div>
+                        <div style="flex: 2; background: rgba(15,23,42,0.5); padding: 0.8rem; border-radius: 8px;">
+                            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Location</div>
+                            <div style="font-size: 1.1rem; color: #f8fafc; font-weight: 500; text-transform: capitalize;">{{ current_user.location }}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔍</span> Nearby Requests
+                        </div>
+                        {% if emergency_requests %}
+                            {% for req in emergency_requests[:1] %}
+                                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #ef4444;"></div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                                        <strong style="color: #fca5a5;">Emergency: Needed Now</strong>
+                                        <span style="color: #ef4444; font-size: 0.8rem; font-weight: bold;" class="pulse">● LIVE</span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #f8fafc;">Distance: &lt; 10 km</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="background: rgba(15,23,42,0.4); padding: 1rem; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem;">
+                                No urgent matches nearby
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <a href="#" style="display: block; text-align: center; color: #60a5fa; text-decoration: none; font-size: 0.9rem; font-weight: 500; padding: 0.8rem; background: rgba(59,130,246,0.1); border-radius: 8px; transition: background 0.2s;">
+                        View All Hospitals →
+                    </a>
+                </div>
+
+                
+                <!-- PATIENTS YOU CAN HELP -->
+                <div class="premium-card" style="grid-column: 1 / -1; border-top: 3px solid #f43f5e;">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">🚨</span>
+                        <h3 class="card-title">Patients You Can Help</h3>
+                    </div>
+                    
+                    {% if patients_you_can_help %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                            {% for p in patients_you_can_help %}
+                                <div style="background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.05); padding: 1.2rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.8rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="font-weight: 600; color: #f8fafc; font-size: 1.1rem;">{{ p.name }}</div>
+                                        <div style="background: {% if p.urgency == 'HIGH' %}#ef4444{% elif p.urgency == 'MEDIUM' %}#f59e0b{% else %}#10b981{% endif %}; color: white; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">
+                                            {{ p.urgency }}
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+                                        <div style="color: #94a3b8;">Needs: <strong style="color: #f43f5e; font-size: 1rem;">{{ p.blood }}</strong></div>
+                                        <div style="color: #94a3b8;">Time: <strong style="color: #cbd5e1;">{{ p.time_remaining }}</strong></div>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #94a3b8; display: flex; align-items: center; gap: 0.4rem;">
+                                        <span>🏥</span> {{ p.hospital }}
+                                    </div>
+                                    <button class="action-btn danger" style="margin: 0; margin-top: 0.5rem; justify-content: center; font-size: 0.85rem; padding: 0.6rem;">Donate to This Patient</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div style="background: rgba(15,23,42,0.4); padding: 1.5rem; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem;">
+                            No compatible patients currently match your blood type.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ANALYTICS -->
+                <div class="premium-card">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">📊</span>
+                        <h3 class="card-title">Donation Analytics</h3>
+                    </div>
+                    
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" style="background: linear-gradient(135deg, #10b981, #34d399); -webkit-background-clip: text;">{{ stats.total_donations }}</div>
+                            <div class="stat-label">Total Donations</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" style="background: linear-gradient(135deg, #f59e0b, #fbbf24); -webkit-background-clip: text;">{{ stats.lives_saved }}</div>
+                            <div class="stat-label">Lives Saved</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa); -webkit-background-clip: text;">{{ stats.approval_rate }}%</div>
+                            <div class="stat-label">Approval Rate</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" style="background: linear-gradient(135deg, #ef4444, #f87171); -webkit-background-clip: text;">{{ stats.emergency_donations }}</div>
+                            <div class="stat-label">Emergencies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GAMIFICATION -->
+                <div class="premium-card">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">🏆</span>
+                        <h3 class="card-title">Gamification</h3>
+                    </div>
+                    
+                    <div>
+                        <div class="badge-row">
+                            <span style="display: flex; align-items: center; gap: 0.5rem;">🥉 First Donation</span>
+                            <span style="font-weight: 600; color: #10b981;">{{ (stats.total_donations >= 1) and '100' or '0' }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ (stats.total_donations >= 1) and '100' or '0' }}%;"></div>
+                        </div>
+
+                        <div class="badge-row">
+                            <span style="display: flex; align-items: center; gap: 0.5rem;">🥈 Life Saver <span style="font-size: 0.75rem; color: #64748b; background: rgba(255,255,255,0.1); padding: 0.1rem 0.4rem; border-radius: 4px;">5</span></span>
+                            <span style="font-weight: 600; color: #10b981;">{{ (stats.total_donations / 5 * 100)|int if stats.total_donations < 5 else 100 }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ (stats.total_donations / 5 * 100)|int if stats.total_donations < 5 else 100 }}%; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+                        </div>
+
+                        <div class="badge-row">
+                            <span style="display: flex; align-items: center; gap: 0.5rem;">🥇 Super Donor <span style="font-size: 0.75rem; color: #64748b; background: rgba(255,255,255,0.1); padding: 0.1rem 0.4rem; border-radius: 4px;">10+</span></span>
+                            <span style="font-weight: 600; color: #10b981;">{{ (stats.total_donations / 10 * 100)|int if stats.total_donations < 10 else 100 }}%</span>
+                        </div>
+                        <div class="progress-bar" style="margin-bottom: 0;">
+                            <div class="progress-fill" style="width: {{ (stats.total_donations / 10 * 100)|int if stats.total_donations < 10 else 100 }}%; background: linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DONATION TIMELINE -->
+                <div class="premium-card">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">📈</span>
+                        <h3 class="card-title">Donation Timeline</h3>
+                    </div>
+                    
+                    <div style="padding-left: 0.5rem; border-left: 2px solid rgba(255,255,255,0.1); margin-left: 0.5rem;">
+                    {% if donations %}
+                        {% for d in donations[:3] %}
+                            <div style="position: relative; margin-bottom: 1.5rem; padding-left: 1rem;">
+                                <div style="position: absolute; left: -21px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #10b981; border: 2px solid #1e293b;"></div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 0.2rem;">{{ d.donation_date.strftime('%B %d, %Y') }}</div>
+                                <div style="color: #f8fafc; font-weight: 500;">{{ d.hospital_name }}</div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="padding-left: 1rem; color: #94a3b8; font-size: 0.9rem;">
+                            <div style="margin-bottom: 0.5rem;">No donations yet.</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">Start your first donation to unlock insights.</div>
+                        </div>
+                    {% endif %}
+                    </div>
+                </div>
+
+                <!-- HEALTH RECORD VAULT -->
+                <div class="premium-card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">🧾</span>
+                        <h3 class="card-title">Health Record Vault</h3>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                        <form action="{{ url_for('main.upload_health_record') }}" method="POST" enctype="multipart/form-data" style="background: rgba(15,23,42,0.5); padding: 1.5rem; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.2);">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.5rem;">Upload Medical Reports</label>
+                                <input type="file" name="report" style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border-radius: 8px; color: #f8fafc; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.1);">
+                            </div>
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.5rem;">Medical Notes</label>
+                                <textarea name="medical_notes" placeholder="Enter conditions or remarks..." style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.2); border-radius: 8px; color: #f8fafc; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.1); min-height: 80px; resize: vertical;"></textarea>
+                            </div>
+                            
+                            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 1rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: transform 0.2s, box-shadow 0.2s;">
+                                <span>🔒</span> Secure Upload + Auto Verification
+                            </button>
+                        </form>
+
+                        <div>
+                            <h4 style="margin: 0 0 1rem 0; color: #cbd5e1; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">Recent Records</h4>
+                            {% if records %}
+                                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                                {% for rec in records %}
+                                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.8rem 1rem; border-radius: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                            <span style="background: #10b981; color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem;">✔</span>
+                                            <span style="color: #f8fafc; font-size: 0.9rem;">Verified Report</span>
+                                        </div>
+                                        <span style="color: #34d399; font-size: 0.8rem; font-weight: 600;">{{ rec.uploaded_on.strftime('%B %d, %Y') }}</span>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                <div style="background: rgba(15,23,42,0.5); padding: 1.5rem; border-radius: 8px; text-align: center; color: #94a3b8; font-size: 0.9rem; border: 1px dashed rgba(255,255,255,0.1);">
+                                    No medical records found in your vault.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                
+                <!-- MAP INTEGRATION -->
+                <div class="premium-card" style="grid-column: 1 / -1;">
+                    <div class="card-header" style="display: flex; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 0.8rem;">
+                            <span style="font-size: 1.5rem;">🗺️</span>
+                            <h3 class="card-title">Live Hospital Map</h3>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select class="form-input" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                                <option value="all">Distance: All</option>
+                                <option value="5">Within 5 km</option>
+                                <option value="10">Within 10 km</option>
+                            </select>
+                            <select class="form-input" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
+                                <option value="all">Priority: All</option>
+                                <option value="high">HIGH Only</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="width: 100%; height: 300px; background: url('https://raw.githubusercontent.com/googlemaps/js-samples/main/dist/samples/advanced-markers-simple/docs/img/advanced-markers-simple.png') center/cover; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6);"></div>
+                        <div style="position: relative; z-index: 10; background: rgba(15,23,42,0.8); padding: 1rem 2rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center; backdrop-filter: blur(4px);">
+                            <div style="font-size: 1.2rem; color: #f8fafc; margin-bottom: 0.5rem;">📍 Interactive Map Active</div>
+                            <div style="font-size: 0.85rem; color: #94a3b8;">Displaying real-time locations of matching hospitals.</div>
+                            <button style="margin-top: 1rem; background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 500; cursor: pointer;">Expand Map</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUICK ACTIONS -->
+                <div class="premium-card" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9));">
+                    <div class="card-header">
+                        <span style="font-size: 1.5rem;">⚡</span>
+                        <h3 class="card-title">Quick Actions</h3>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <a href="#" class="action-btn">
+                            <span>Donate Now</span>
+                            <span>→</span>
+                        </a>
+                        <a href="#" class="action-btn">
+                            <span>Find Nearby Camps</span>
+                            <span>→</span>
+                        </a>
+                        <a href="#" class="action-btn">
+                            <span>Update Profile</span>
+                            <span>→</span>
+                        </a>
+                        <form action="{{ url_for('main.toggle_availability') }}" method="POST" style="margin: 0;">
+                            <button type="submit" class="action-btn danger" style="width: 100%; border: none; cursor: pointer;">
+                                <span>Emergency Mode {% if current_user.is_available %}ON{% else %}OFF{% endif %}</span>
+                                <span>🚨</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2026 VitalDrop Global Logistics</p>
+        </div>
+    </footer>
+
+    <script>
+        function filterGlobalRequests() {
+            const bloodFilter = document.getElementById('filter-blood').value.toUpperCase();
+            const priorityFilter = document.getElementById('filter-priority').value.toUpperCase();
+            const locationFilter = document.getElementById('filter-location').value.toUpperCase();
+            
+            const rows = document.querySelectorAll('.global-req-row');
+            
+            rows.forEach(row => {
+                const blood = row.getAttribute('data-blood').toUpperCase();
+                const priority = row.getAttribute('data-priority').toUpperCase();
+                const location = row.getAttribute('data-location').toUpperCase();
+                
+                const matchBlood = (bloodFilter === 'ALL' || blood === bloodFilter);
+                const matchPriority = (priorityFilter === 'ALL' || priority === priorityFilter);
+                const matchLocation = (location.includes(locationFilter));
+                
+                if (matchBlood && matchPriority && matchLocation) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function filterHospitals() {
+            const bloodFilter = document.getElementById('h-filter-blood').value.toUpperCase();
+            const locationFilter = document.getElementById('h-filter-location').value.toUpperCase();
+            const emergencyOnly = document.getElementById('h-filter-emergency').checked;
+            
+            const cards = document.querySelectorAll('.hospital-card');
+            
+            cards.forEach(card => {
+                const bloods = card.getAttribute('data-blood').toUpperCase();
+                const loc = card.getAttribute('data-location').toUpperCase();
+                const isEmerg = card.getAttribute('data-emergency') === 'true';
+                
+                const matchBlood = (bloodFilter === 'ALL' || bloods.includes(bloodFilter));
+                const matchLocation = (loc.includes(locationFilter));
+                const matchEmerg = (!emergencyOnly || isEmerg);
+                
+                if (matchBlood && matchLocation && matchEmerg) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

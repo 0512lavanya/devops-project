@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: lifestream-app
+    env: docker
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lifestream-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
+  - type: psql
+    name: lifestream-db
+    region: oregon
+    plan: free
+    databaseName: blood_donation
+    user: admin

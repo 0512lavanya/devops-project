@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | VitalDrop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="glass-header">
+        <nav class="container nav-bar">
+            <div class="logo">
+                <span class="logo-icon">💧</span> VitalDrop
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('main.signup') }}" class="btn-primary-outline">Sign Up</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container fade-in form-page">
+        <div class="form-container glass-card">
+            <h2>Welcome Back</h2>
+            <p>Login to track your donations and requests.</p>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            <form action="{{ url_for('main.login') }}" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
+                </div>
+                <button type="submit" class="btn-primary full-width">Login</button>
+            </form>
+            <p style="margin-top: 1rem; text-align: center;">Don't have an account? <a href="{{ url_for('main.signup') }}">Sign Up</a></p>
+        </div>
+    </main>
+</body>
+</html>
